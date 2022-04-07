@@ -20,7 +20,7 @@ public class MainWindow extends Application {
 
     public static MainWindow mainWindow;
 
-    private Closable currentUI;
+    private Closable currentState;
 
     private BorderPane root;
     private FlowPane leftPane;
@@ -48,9 +48,10 @@ public class MainWindow extends Application {
         playLocalButton = new Button("1v1");
         playLocalButton.setOnMouseClicked(this::startLocalGame);
         playOnlineButton = new Button("Online");
-        //playOnlineButton.setOnMouseClicked(this::);
+        playOnlineButton.setOnMouseClicked(this::startOnlineGame);
         leftPane.getChildren().add(playComputerButton);
         leftPane.getChildren().add(playLocalButton);
+        leftPane.getChildren().add(playOnlineButton);
 
         root.setCenter(new BoardUI());
 
@@ -62,22 +63,25 @@ public class MainWindow extends Application {
         primaryStage.show();
     }
 
-
     private void startComputerGame(MouseEvent mouseEvent) {
-        closeCurrentUI();
-        currentUI = new PlayerVsComputerState(Side.WHITE);
-        root.setCenter((BorderPane) currentUI);
+        closeCurrentState();
+        currentState = new PlayerVsComputerState(Side.WHITE);
+        root.setCenter((BorderPane) currentState);
     }
 
     public void startLocalGame(Event event){
-        closeCurrentUI();
-        currentUI = new PlayerVsPlayerState();
-        root.setCenter((BorderPane) currentUI);
+        closeCurrentState();
+        currentState = new PlayerVsPlayerState();
+        root.setCenter((BorderPane) currentState);
     }
 
-    private void closeCurrentUI(){
-        if(currentUI != null){
-            currentUI.close();
+    private void startOnlineGame(MouseEvent mouseEvent) {
+
+    }
+
+    private void closeCurrentState(){
+        if(currentState != null){
+            currentState.close();
         }
     }
 }
