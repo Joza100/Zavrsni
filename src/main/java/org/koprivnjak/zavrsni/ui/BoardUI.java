@@ -13,7 +13,6 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import org.koprivnjak.zavrsni.util.Utility;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +31,8 @@ public class BoardUI extends Pane {
     private double dimensions;
     private double squareDimensions;
 
+    private boolean flipped;
+
     private Canvas canvas;
 
     private Board board;
@@ -42,6 +43,7 @@ public class BoardUI extends Pane {
     private BoardClickListener boardClickListener;
 
     public BoardUI() {
+        flipped = false;
         pieceDrawList = new ArrayList<>();
         canvas = new ResizableCanvas();
         getChildren().add(canvas);
@@ -61,29 +63,31 @@ public class BoardUI extends Pane {
     }
 
     private void onMousePressed(MouseEvent mouseEvent) {
-        for (PieceDraw pieceDraw : pieceDrawList) {
-            if ((mouseEvent.getX() > pieceDraw.getX() && mouseEvent.getX() < pieceDraw.getX() + squareDimensions) &&
-                    (mouseEvent.getY() > pieceDraw.getY() && mouseEvent.getY() < pieceDraw.getY() + squareDimensions)){
-                selectedPieceDraw = pieceDraw;
+        if(mouseEvent.isPrimaryButtonDown()) {
+            for (PieceDraw pieceDraw : pieceDrawList) {
+                if ((mouseEvent.getX() > pieceDraw.getX() && mouseEvent.getX() < pieceDraw.getX() + squareDimensions) &&
+                        (mouseEvent.getY() > pieceDraw.getY() && mouseEvent.getY() < pieceDraw.getY() + squareDimensions)) {
+                    selectedPieceDraw = pieceDraw;
+                }
             }
+            redraw();
         }
-        redraw();
     }
     private void onMouseReleased(MouseEvent mouseEvent) {
         if(selectedPieceDraw == null){
             return;
         }
-        int initialX = Utility.xCoordinateToFile(selectedPieceDraw.getInitialX(), squareDimensions);
-        int initialY = Utility.yCoordinateToRank(selectedPieceDraw.getInitialY(), squareDimensions);
-        int x = Utility.xCoordinateToFile(mouseEvent.getX(), squareDimensions);
-        int y = Utility.yCoordinateToRank(mouseEvent.getY(), squareDimensions);
+        int initialX = xCoordinateToFile(selectedPieceDraw.getInitialX(), squareDimensions);
+        int initialY = yCoordinateToRank(selectedPieceDraw.getInitialY(), squareDimensions);
+        int x = xCoordinateToFile(mouseEvent.getX(), squareDimensions);
+        int y = yCoordinateToRank(mouseEvent.getY(), squareDimensions);
         Move move;
         if (y == 7 && selectedPieceDraw.getPiece() == Piece.WHITE_PAWN){
-            move = new Move(Utility.rankFileToSquare(initialY, initialX), Utility.rankFileToSquare(y, x), Piece.WHITE_QUEEN);
+            move = new Move(rankFileToSquare(initialY, initialX), rankFileToSquare(y, x), Piece.WHITE_QUEEN);
         } else if (y == 0 && selectedPieceDraw.getPiece() == Piece.BLACK_PAWN){
-            move = new Move(Utility.rankFileToSquare(initialY, initialX), Utility.rankFileToSquare(y, x), Piece.BLACK_QUEEN);
+            move = new Move(rankFileToSquare(initialY, initialX), rankFileToSquare(y, x), Piece.BLACK_QUEEN);
         } else {
-            move = new Move(Utility.rankFileToSquare(initialY, initialX), Utility.rankFileToSquare(y, x));
+            move = new Move(rankFileToSquare(initialY, initialX), rankFileToSquare(y, x));
         }
         if(boardClickListener != null){
             boardClickListener.onClick(move);
@@ -137,8 +141,8 @@ public class BoardUI extends Pane {
             List<Move> moves = board.legalMoves();
             for(Move move : moves){
                 if(move.getFrom().equals(square)){
-                    double x = (move.getTo().getFile().value().charAt(5) - 65) * squareDimensions;
-                    double y = dimensions - (move.getTo().getRank().value().charAt(5) - 48) * squareDimensions;
+                    double x = fileToXCoordinate(move.getTo(), squareDimensions);
+                    double y = rankToYCoordinate(move.getTo(), dimensions, squareDimensions);
                     gc.setFill(MOVE_SQUARE);
                     gc.fillRect(x, y, squareDimensions, squareDimensions);
                 }
@@ -146,8 +150,8 @@ public class BoardUI extends Pane {
         }
         if(board != null && board.isKingAttacked()){
             Square square = board.getKingSquare(board.getSideToMove());
-            double x = Utility.fileToXCoordinate(square, squareDimensions);
-            double y = Utility.rankToYCoordinate(square, dimensions, squareDimensions);
+            double x = fileToXCoordinate(square, squareDimensions);
+            double y = rankToYCoordinate(square, dimensions, squareDimensions);
             gc.setFill(CHECK_SQUARE);
             gc.fillRect(x, y, squareDimensions, squareDimensions);
         }
@@ -182,8 +186,10 @@ public class BoardUI extends Pane {
         };
         PixelReader reader = PIECE_SET.getPixelReader();
         WritableImage pieceImage = new WritableImage(reader, x, y, 133, 133);
-        PieceDraw pieceDraw = new PieceDraw(Utility.fileToXCoordinate(square, squareDimensions),
-                Utility.rankToYCoordinate(square, dimensions, squareDimensions), piece, pieceImage, square);
+        PieceDraw pieceDraw;
+        pieceDraw = new PieceDraw(fileToXCoordinate(square, squareDimensions),
+                rankToYCoordinate(square, dimensions, squareDimensions), piece, pieceImage, square);
+
         pieceDrawList.add(pieceDraw);
 
     }
@@ -202,6 +208,35 @@ public class BoardUI extends Pane {
         }
     }
 
+    public void flip(){
+        flipped = !flipped;
+    }
+
+    public Square rankFileToSquare(int rank, int file){
+        if(!flipped)
+            return Square.squareAt(file + rank * 8);
+        else
+            return Square.squareAt(7 - file + (7 - rank) * 8);
+    }
+    public double fileToXCoordinate(Square square, double squareDimensions){
+        if(!flipped)
+            return (square.getFile().value().charAt(5) - 65) * squareDimensions;
+        else
+            return dimensions - squareDimensions - (square.getFile().value().charAt(5) - 65) * squareDimensions;
+    }
+    public double rankToYCoordinate(Square square, double dimensions, double squareDimensions){
+        if(!flipped)
+            return dimensions - (square.getRank().value().charAt(5) - 48) * squareDimensions;
+        else
+            return (square.getRank().value().charAt(5) - 48) * squareDimensions - squareDimensions;
+    }
+    public int xCoordinateToFile(double x, double squareDimensions){
+        return (int) (x / squareDimensions);
+    }
+    public int yCoordinateToRank(double y, double squareDimensions) {
+        return 7 - (int) (y / squareDimensions);
+    }
+
     public void setBoardClickListener(BoardClickListener boardClickListener) {
         this.boardClickListener = boardClickListener;
     }
@@ -210,4 +245,5 @@ public class BoardUI extends Pane {
         this.board = board;
         draw();
     }
+
 }

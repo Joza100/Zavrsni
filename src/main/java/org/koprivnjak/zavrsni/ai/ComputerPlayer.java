@@ -17,7 +17,7 @@ public class ComputerPlayer {
         protected Move call() {
 
             uci.positionFen(board.getFen());
-            UCIResponse<Analysis> response = uci.analysis(16);
+            UCIResponse<Analysis> response = uci.analysis(depth);
             var analysis = response.getResultOrThrow();
 
 // Best move
@@ -37,8 +37,11 @@ public class ComputerPlayer {
 
     private OnMoveFoundListener onMoveFoundListener;
 
-    public ComputerPlayer(Board board){
+    private int depth;
+
+    public ComputerPlayer(Board board, int depth){
         this.board = board;
+        this.depth = depth;
 
         uci = new UCI();
         uci.start("stockfish.exe");

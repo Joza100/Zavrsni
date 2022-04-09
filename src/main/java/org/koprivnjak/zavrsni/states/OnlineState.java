@@ -69,6 +69,10 @@ public class OnlineState extends BorderPane implements Closable {
         setCenter(boardUI);
         board = new Board();
         boardUI.setBoard(board);
+        if(side == Side.BLACK){
+            boardUI.flip();
+        }
+
         communication = new Communication(socket);
         communication.setPacketReceivedListener(packet -> {
             if(packet instanceof MovePacket movePacket) {
@@ -77,6 +81,7 @@ public class OnlineState extends BorderPane implements Closable {
                 boardUI.draw();
             }
         });
+
         boardUI.setBoardClickListener(move -> {
             for (Move legalMove : board.legalMoves()){
                 if(move.equals(legalMove) && board.getSideToMove() == side){

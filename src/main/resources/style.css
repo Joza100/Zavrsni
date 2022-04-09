@@ -1,0 +1,30 @@
+.root {
+    -fx-accent: #1e74c6;
+    -fx-focus-color: -fx-accent;
+    -fx-base: #373e43;
+    -fx-control-inner-background: derive(-fx-base, 35%);
+    -fx-control-inner-background-alt: -fx-control-inner-background ;
+}
+
+#playComputerSetup {
+    -fx-background-color: #222222;
+    -fx-font-family:courier_new;
+    -fx-border-radius: 5;
+    -fx-border-color: Black;
+}
+
+#playComputerLabel {
+     -fx-font: 40px "serif";
+}
+.confirmButtons {
+    fx-width: 100px;
+}
+.errorText {
+    -fx-text-fill: #FF0000;
+    -fx-weight: bold;
+    -fx-font-size: 20px;
+}
+.inputLabel {
+    -fx-font-size: 20px;
+    -fx-weight: bold;
+}

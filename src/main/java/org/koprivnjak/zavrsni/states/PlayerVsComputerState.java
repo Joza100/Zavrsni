@@ -14,18 +14,20 @@ public class PlayerVsComputerState extends BorderPane implements Closable {
 
     private ComputerPlayer computerPlayer;
 
-    public PlayerVsComputerState(Side playerSide){
+    public PlayerVsComputerState(Side playerSide, int depth){
         board = new Board();
 
-        computerPlayer = new ComputerPlayer(board);
+        computerPlayer = new ComputerPlayer(board, depth);
         computerPlayer.setOnMoveFoundListener(move -> {
             board.doMove(move.getLan());
             boardUI.draw();
         });
 
-
         boardUI = new BoardUI();
         boardUI.setBoard(board);
+        if(playerSide == Side.BLACK){
+            boardUI.flip();
+        }
         boardUI.setBoardClickListener(move -> {
             if (board.getSideToMove() != playerSide){
                 return;
@@ -39,8 +41,10 @@ public class PlayerVsComputerState extends BorderPane implements Closable {
                 }
             }
         });
-
         setCenter(boardUI);
+        if(playerSide == Side.BLACK){
+            computerPlayer.findMove();
+        }
     }
     @Override
     public void close() {
