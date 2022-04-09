@@ -10,6 +10,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.stage.Stage;
+import org.koprivnjak.zavrsni.states.OnlineState;
 import org.koprivnjak.zavrsni.ui.BoardUI;
 import org.koprivnjak.zavrsni.ui.Closable;
 import org.koprivnjak.zavrsni.states.PlayerVsComputerState;
@@ -17,6 +18,7 @@ import org.koprivnjak.zavrsni.states.PlayerVsPlayerState;
 
 
 public class MainWindow extends Application {
+
 
     public static MainWindow mainWindow;
 
@@ -26,7 +28,8 @@ public class MainWindow extends Application {
     private FlowPane leftPane;
     private Button playComputerButton;
     private Button playLocalButton;
-    private Button playOnlineButton;
+    private Button playOnlineServerButton;
+    private Button playOnlineClientButton;
 
     public MainWindow() {
         mainWindow = this;
@@ -47,11 +50,14 @@ public class MainWindow extends Application {
         playComputerButton.setOnMouseClicked(this::startComputerGame);
         playLocalButton = new Button("1v1");
         playLocalButton.setOnMouseClicked(this::startLocalGame);
-        playOnlineButton = new Button("Online");
-        playOnlineButton.setOnMouseClicked(this::startOnlineGame);
+        playOnlineServerButton = new Button("Online server");
+        playOnlineServerButton.setOnMouseClicked(this::startOnlineGameServer);
+        playOnlineClientButton = new Button("Online client");
+        playOnlineClientButton.setOnMouseClicked(this::startOnlineGameClient);
         leftPane.getChildren().add(playComputerButton);
         leftPane.getChildren().add(playLocalButton);
-        leftPane.getChildren().add(playOnlineButton);
+        leftPane.getChildren().add(playOnlineServerButton);
+        leftPane.getChildren().add(playOnlineClientButton);
 
         root.setCenter(new BoardUI());
 
@@ -60,6 +66,7 @@ public class MainWindow extends Application {
         Scene scene = new Scene(root, 800, 800, true);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Chess");
+        primaryStage.setOnCloseRequest(event -> closeCurrentState());
         primaryStage.show();
     }
 
@@ -75,8 +82,15 @@ public class MainWindow extends Application {
         root.setCenter((BorderPane) currentState);
     }
 
-    private void startOnlineGame(MouseEvent mouseEvent) {
-
+    private void startOnlineGameServer(MouseEvent mouseEvent) {
+        closeCurrentState();
+        currentState = new OnlineState(6666);
+        root.setCenter((BorderPane) currentState);
+    }
+    private void startOnlineGameClient(MouseEvent mouseEvent){
+        closeCurrentState();
+        currentState = new OnlineState(6666, "localhost");
+        root.setCenter((BorderPane) currentState);
     }
 
     private void closeCurrentState(){
