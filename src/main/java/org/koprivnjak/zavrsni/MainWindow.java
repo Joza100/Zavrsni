@@ -17,12 +17,13 @@ import org.koprivnjak.zavrsni.states.OnlineState;
 import org.koprivnjak.zavrsni.states.PlayerVsComputerState;
 import org.koprivnjak.zavrsni.states.PlayerVsPlayerState;
 import org.koprivnjak.zavrsni.ui.BoardUI;
-import org.koprivnjak.zavrsni.ui.Closable;
+import org.koprivnjak.zavrsni.states.State;
 
 import java.util.Random;
 
 
 public class MainWindow extends Application {
+    private static final int INTEGER_PARSE_ERROR = -100;
     private static final double LEFT_PANE_WIDTH = 300;
 
     private Pane currentState;
@@ -32,22 +33,46 @@ public class MainWindow extends Application {
     private GridPane leftButtonPane;
     private Button playComputerButton;
     private Button playLocalButton;
-    private Button playOnlineServerButton;
-    private Button playOnlineClientButton;
+    private Button createServerButton;
+    private Button createClientButton;
+
 
     private AnchorPane playComputerSetup;
     private Label playComputerLabel;
     private FlowPane playComputerSettingsPane;
-    private Label selectSideLabel;
-    private ComboBox<String> selectSideComboBox;
-    private Label depthLabel;
-    private TextField depthTextField;
+    private Label playComputerSelectSideLabel;
+    private ComboBox<String> playComputerSelectSideComboBox;
+    private Label playComputerDepthLabel;
+    private TextField playComputerDepthTextField;
+    private Label playComputerErrorLabel;
+    private FlowPane playComputerConfirmButtons;
     private Button playComputerCancelButton;
     private Button playComputerConfirmButton;
-    private Label invalidDepthLabel;
-    private Label invalidSideLabel;
 
 
+    private AnchorPane createServerSetup;
+    private Label createServerLabel;
+    private FlowPane createServerSettingsPane;
+    private Label createServerSelectSideLabel;
+    private ComboBox<String> createServerSelectSideComboBox;
+    private Label createServerPortLabel;
+    private TextField createServerPortTextField;
+    private Label createServerErrorLabel;
+    private FlowPane createServerConfirmButtons;
+    private Button createServerCancelButton;
+    private Button createServerConfirmButton;
+
+    private AnchorPane createClientSetup;
+    private Label createClientLabel;
+    private FlowPane createClientSettingsPane;
+    private Label createClientIpAddressLabel;
+    private TextField createClientIpAddressTextField;
+    private Label createClientPortLabel;
+    private TextField createClientPortTextField;
+    private Label createClientErrorLabel;
+    private FlowPane createClientConfirmButtons;
+    private Button createClientCancelButton;
+    private Button createClientConfirmButton;
 
     private Random random;
 
@@ -64,11 +89,85 @@ public class MainWindow extends Application {
         //Creating root and adding all elements
         root = new BorderPane();
 
+        //Create server screen
+        createServerSetup = new AnchorPane();
+        createServerSetup.getStyleClass().add("setupPane");
+        createServerLabel = new Label("Create server");
+        createServerLabel.getStyleClass().add("titleLabel");
+
+        createServerSettingsPane = new FlowPane();
+        createServerSettingsPane.setOrientation(Orientation.VERTICAL);
+        createServerSettingsPane.setVgap(4);
+        createServerSelectSideLabel = new Label("Select your side: ");
+        createServerSelectSideLabel.getStyleClass().add("inputLabel");
+        createServerSelectSideComboBox = new ComboBox<>(FXCollections.observableArrayList("White", "Black", "Random"));
+        createServerPortLabel = new Label("Port: ");
+        createServerPortLabel.getStyleClass().add("inputLabel");
+        createServerPortTextField = new TextField();
+        createServerErrorLabel = new Label();
+        createServerErrorLabel.getStyleClass().add("errorLabel");
+        createServerConfirmButton = new Button("Confirm");
+        createServerCancelButton = new Button("Cancel");
+        createServerConfirmButton.setMinSize(100, 40);
+        createServerCancelButton.setMinSize(100, 40);
+        createServerConfirmButton.setOnMouseClicked(this::onCreateServerConfirmButtonClicked);
+        createServerCancelButton.setOnMouseClicked(this::onCreateServerCancelButtonClicked);
+        createServerConfirmButtons = new FlowPane();
+        createServerConfirmButtons.getChildren().addAll(createServerCancelButton, createServerConfirmButton);
+        createServerConfirmButtons.setOrientation(Orientation.HORIZONTAL);
+
+        AnchorPane.setLeftAnchor(createServerSettingsPane, 5.0);
+        AnchorPane.setTopAnchor(createServerSettingsPane, 80.0);
+        createServerSettingsPane.getChildren().addAll(createServerSelectSideLabel,
+                createServerSelectSideComboBox, createServerPortLabel,
+                createServerPortTextField, createServerErrorLabel, createServerConfirmButtons);
+
+
+        createServerSetup.getChildren().addAll(createServerLabel, createServerSettingsPane);
+        createServerSetup.setPrefWidth(LEFT_PANE_WIDTH);
+
+
+        //Create client screen
+        createClientSetup = new AnchorPane();
+        createClientSetup.getStyleClass().add("setupPane");
+        createClientLabel = new Label("Create client");
+        createClientLabel.getStyleClass().add("titleLabel");
+        createClientSettingsPane = new FlowPane();
+        createClientSettingsPane.setOrientation(Orientation.VERTICAL);
+        createClientSettingsPane.setVgap(4);
+        createClientPortLabel = new Label("Port: ");
+        createClientPortLabel.getStyleClass().add("inputLabel");
+        createClientPortTextField = new TextField();
+        createClientIpAddressLabel = new Label("Ip address: ");
+        createClientIpAddressLabel.getStyleClass().add("inputLabel");
+        createClientIpAddressTextField = new TextField();
+        createClientErrorLabel = new Label();
+        createClientErrorLabel.getStyleClass().add("errorLabel");
+        createClientConfirmButton = new Button("Confirm");
+        createClientCancelButton = new Button("Cancel");
+        createClientConfirmButton.setMinSize(100, 40);
+        createClientCancelButton.setMinSize(100, 40);
+        createClientConfirmButton.setOnMouseClicked(this::onCreateClientConfirmButtonClicked);
+        createClientCancelButton.setOnMouseClicked(this::onCreateClientCancelButtonClicked);
+        createClientConfirmButtons = new FlowPane();
+        createClientConfirmButtons.getChildren().addAll(createClientCancelButton, createClientConfirmButton);
+        createClientConfirmButtons.setOrientation(Orientation.HORIZONTAL);
+
+        AnchorPane.setLeftAnchor(createClientSettingsPane, 5.0);
+        AnchorPane.setTopAnchor(createClientSettingsPane, 80.0);
+        createClientSettingsPane.getChildren().addAll(createClientIpAddressLabel, createClientIpAddressTextField,
+                createClientPortLabel, createClientPortTextField, createClientErrorLabel, createClientConfirmButtons);
+
+
+        createClientSetup.getChildren().addAll(createClientLabel, createClientSettingsPane);
+        createClientSetup.setPrefWidth(LEFT_PANE_WIDTH);
+
+        //Play against computer screen
         playComputerSetup = new AnchorPane();
-        playComputerSetup.setId("playComputerSetup");
+        playComputerSetup.getStyleClass().add("setupPane");
 
         playComputerLabel = new Label("Play Computer");
-        playComputerLabel.setId("playComputerLabel");
+        playComputerLabel.getStyleClass().add("titleLabel");
         AnchorPane.setTopAnchor(playComputerLabel, 20.0);
 
         playComputerCancelButton = new Button("Cancel");
@@ -79,52 +178,46 @@ public class MainWindow extends Application {
         playComputerConfirmButton.getStyleClass().add("confirmButtons");
         playComputerConfirmButton.setMinSize(100, 40);
         playComputerConfirmButton.setOnMouseClicked(this::onPlayComputerConfirmButtonClicked);
-        AnchorPane.setBottomAnchor(playComputerCancelButton, 500.0);
-        AnchorPane.setBottomAnchor(playComputerConfirmButton, 500.0);
-        AnchorPane.setLeftAnchor(playComputerCancelButton, 5.0);
-        AnchorPane.setRightAnchor(playComputerConfirmButton, 80.0);
+        playComputerConfirmButtons = new FlowPane();
+        playComputerConfirmButtons.getChildren().addAll(playComputerCancelButton, playComputerConfirmButton);
+        playComputerConfirmButtons.setOrientation(Orientation.HORIZONTAL);
 
         playComputerSettingsPane = new FlowPane();
         playComputerSettingsPane.setOrientation(Orientation.VERTICAL);
         playComputerSettingsPane.setVgap(4);
-        selectSideLabel = new Label("Select your side: ");
-        selectSideLabel.getStyleClass().add("inputLabel");
-        selectSideComboBox = new ComboBox<>(FXCollections.observableArrayList("White", "Black", "Random"));
-        depthLabel = new Label("Select Stockfish depth: ");
-        depthLabel.getStyleClass().add("inputLabel");
-        depthTextField = new TextField();
+        playComputerSelectSideLabel = new Label("Select your side: ");
+        playComputerSelectSideLabel.getStyleClass().add("inputLabel");
+        playComputerSelectSideComboBox = new ComboBox<>(FXCollections.observableArrayList("White", "Black", "Random"));
+        playComputerDepthLabel = new Label("Select Stockfish depth: ");
+        playComputerDepthLabel.getStyleClass().add("inputLabel");
+        playComputerDepthTextField = new TextField();
         AnchorPane.setLeftAnchor(playComputerSettingsPane, 5.0);
         AnchorPane.setTopAnchor(playComputerSettingsPane, 80.0);
-        invalidDepthLabel = new Label("The inputted depth is invalid.");
-        invalidDepthLabel.setVisible(false);
-        invalidDepthLabel.getStyleClass().add("errorText");
-        invalidSideLabel = new Label("Side is not selected.");
-        invalidSideLabel.setVisible(false);
-        invalidSideLabel.getStyleClass().add("errorText");
-        playComputerSettingsPane.getChildren().addAll(selectSideLabel, selectSideComboBox, depthLabel, depthTextField,
-                invalidDepthLabel, invalidSideLabel);
+        playComputerErrorLabel = new Label();
+        playComputerErrorLabel.getStyleClass().add("errorLabel");
+        playComputerSettingsPane.getChildren().addAll(playComputerSelectSideLabel, playComputerSelectSideComboBox,
+                playComputerDepthLabel, playComputerDepthTextField, playComputerErrorLabel, playComputerConfirmButtons);
 
 
-        playComputerSetup.getChildren().addAll(playComputerLabel, playComputerSettingsPane, playComputerConfirmButton,
-                playComputerCancelButton);
+        playComputerSetup.getChildren().addAll(playComputerLabel, playComputerSettingsPane);
         playComputerSetup.setMinWidth(LEFT_PANE_WIDTH);
 
 
-
+        //Buttons Pane
         leftButtonPane = new GridPane();
         playComputerButton = new Button("Computer");
         playComputerButton.setOnMouseClicked(this::onPlayComputerButtonClicked);
         playLocalButton = new Button("1v1");
-        playLocalButton.setOnMouseClicked(this::startLocalGame);
-        playOnlineServerButton = new Button("Online server");
-        playOnlineServerButton.setOnMouseClicked(this::startOnlineGameServer);
-        playOnlineClientButton = new Button("Online client");
-        playOnlineClientButton.setOnMouseClicked(this::startOnlineGameClient);
+        playLocalButton.setOnMouseClicked(this::onPlayLocalButtonClicked);
+        createServerButton = new Button("Online server");
+        createServerButton.setOnMouseClicked(this::onCreateServerButtonClicked);
+        createClientButton = new Button("Online client");
+        createClientButton.setOnMouseClicked(this::onCreateClientButtonClicked);
         leftButtonPane.setMinWidth(LEFT_PANE_WIDTH);
         leftButtonPane.add(playComputerButton, 0, 0);
         leftButtonPane.add(playLocalButton, 1, 0);
-        leftButtonPane.add(playOnlineServerButton, 0, 1);
-        leftButtonPane.add(playOnlineClientButton, 1, 1);
+        leftButtonPane.add(createServerButton, 0, 1);
+        leftButtonPane.add(createClientButton, 1, 1);
 
         for (int row = 0 ; row < 2 ; row++){
             RowConstraints rc = new RowConstraints();
@@ -142,8 +235,10 @@ public class MainWindow extends Application {
 
         playComputerButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         playLocalButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        playOnlineServerButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        playOnlineClientButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        createServerButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        createClientButton.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+
 
         root.setLeft(leftButtonPane);
         root.setCenter(new BoardUI());
@@ -151,39 +246,104 @@ public class MainWindow extends Application {
         //Making a window
         Scene scene = new Scene(root, 800, 800, true);
         scene.getStylesheets().add("/style.css");
+        scene.widthProperty().addListener((observable, oldValue, newValue) -> {
+            
+        });
         primaryStage.setScene(scene);
         primaryStage.setTitle("Chess");
         primaryStage.setOnCloseRequest(event -> closeCurrentState());
         primaryStage.show();
     }
 
-    private void onPlayComputerConfirmButtonClicked(MouseEvent mouseEvent) {
+    private void onCreateClientCancelButtonClicked(MouseEvent mouseEvent) {
+        root.setLeft(leftButtonPane);
+    }
+
+    private void onCreateClientConfirmButtonClicked(MouseEvent mouseEvent) {
         boolean successful = true;
-        Side side = null;
-        if (selectSideComboBox.getSelectionModel().getSelectedItem() == null){
-            invalidSideLabel.setVisible(true);
+        String errorText = "";
+
+        int port = parseInteger(createClientPortTextField.getText());
+        String ipAddress = createClientIpAddressTextField.getText();
+        if (port < 1024 || port > 65535){
+            errorText += "Invalid port selected\n";
             successful = false;
-        } else if (selectSideComboBox.getSelectionModel().getSelectedItem().equals("White")){
+        }
+        if(!validIP(ipAddress)){
+            successful = false;
+            errorText += "Invalid IP address";
+        }
+
+        if(successful){
+            createServerErrorLabel.setText("");
+            root.setLeft(leftButtonPane);
+            changeState(new OnlineState(port, ipAddress));
+        } else {
+            createServerErrorLabel.setText(errorText);
+        }
+    }
+
+    private void onCreateServerCancelButtonClicked(MouseEvent mouseEvent) {
+        root.setLeft(leftButtonPane);
+    }
+
+    private void onCreateServerConfirmButtonClicked(MouseEvent mouseEvent) {
+        boolean successful = true;
+        String errorText = "";
+
+        int port = parseInteger(createServerPortTextField.getText());
+        Side side = null;
+        if (port < 1024 || port > 65535){
+            errorText += "Invalid port selected\n";
+            successful = false;
+        }
+        if (createServerSelectSideComboBox.getSelectionModel().getSelectedItem() == null){
+            errorText += "Side not selected";
+            successful = false;
+        } else if (createServerSelectSideComboBox.getSelectionModel().getSelectedItem().equals("White")){
             side = Side.WHITE;
-        } else if (selectSideComboBox.getSelectionModel().getSelectedItem().equals("Black")){
+        } else if (createServerSelectSideComboBox.getSelectionModel().getSelectedItem().equals("Black")){
             side = Side.BLACK;
-        } else if (selectSideComboBox.getSelectionModel().getSelectedItem().equals("Random")){
+        } else if (createServerSelectSideComboBox.getSelectionModel().getSelectedItem().equals("Random")){
             side = random.nextInt(0, 2) == 0 ? Side.WHITE : Side.BLACK;
         }
-        String depthText = depthTextField.getText();
-        int depth = 1;
-        if(depthText.matches("-?\\d+")){
-            depth = Integer.parseInt(depthText);
+
+        if(successful){
+            createServerErrorLabel.setText("");
+            root.setLeft(leftButtonPane);
+            changeState(new OnlineState(port, side));
         } else {
-            invalidDepthLabel.setVisible(true);
+            createServerErrorLabel.setText(errorText);
+        }
+    }
+
+    private void onPlayComputerConfirmButtonClicked(MouseEvent mouseEvent) {
+        boolean successful = true;
+        String errorText = "";
+        Side side = null;
+        if (playComputerSelectSideComboBox.getSelectionModel().getSelectedItem() == null){
+            errorText += "Side not selected\n";
+            successful = false;
+        } else if (playComputerSelectSideComboBox.getSelectionModel().getSelectedItem().equals("White")){
+            side = Side.WHITE;
+        } else if (playComputerSelectSideComboBox.getSelectionModel().getSelectedItem().equals("Black")){
+            side = Side.BLACK;
+        } else if (playComputerSelectSideComboBox.getSelectionModel().getSelectedItem().equals("Random")){
+            side = random.nextInt(0, 2) == 0 ? Side.WHITE : Side.BLACK;
+        }
+        String depthText = playComputerDepthTextField.getText();
+        int depth = parseInteger(depthText);
+        if(depth < 1) {
+            errorText += "The inputted depth is invalid";
             successful = false;
         }
 
         if(successful){
             changeState(new PlayerVsComputerState(side, depth));
-            invalidSideLabel.setVisible(false);
-            invalidDepthLabel.setVisible(false);
+            playComputerErrorLabel.setText("");
             root.setLeft(leftButtonPane);
+        } else {
+            playComputerErrorLabel.setText(errorText);
         }
     }
 
@@ -195,20 +355,21 @@ public class MainWindow extends Application {
         root.setLeft(playComputerSetup);
     }
 
-    public void startLocalGame(Event event){
+    public void onPlayLocalButtonClicked(Event event){
         changeState(new PlayerVsPlayerState());
     }
 
-    private void startOnlineGameServer(MouseEvent mouseEvent) {
-        changeState(new OnlineState(6666));
+    private void onCreateServerButtonClicked(MouseEvent mouseEvent) {
+        root.setLeft(createServerSetup);
     }
-    private void startOnlineGameClient(MouseEvent mouseEvent){
-        changeState(new OnlineState(6666, "localhost"));
+    private void onCreateClientButtonClicked(MouseEvent mouseEvent){
+        root.setLeft(createClientSetup);
     }
 
     private void changeState(Pane state){
         closeCurrentState();
         currentState = state;
+        ((State)currentState).start();
         /*currentState.widthProperty().addListener((observable, oldValue, newValue) -> {
             double centerWidth = newValue.doubleValue();
             double paneWidth = ;
@@ -216,11 +377,47 @@ public class MainWindow extends Application {
             ((Pane) root.getLeft()).setPrefWidth(paneWidth);
         });*/
         root.setCenter(state);
+
     }
 
     private void closeCurrentState(){
         if(currentState != null){
-            ((Closable)currentState).close();
+            ((State)currentState).close();
+        }
+    }
+
+    private static int parseInteger(String string){
+        int integer;
+        if(string.matches("-?\\d+")){
+            integer = Integer.parseInt(string);
+        } else {
+            integer = INTEGER_PARSE_ERROR;
+        }
+        return integer;
+    }
+
+    private static boolean validIP (String ip) {
+        try {
+            if ( ip == null || ip.isEmpty() ) {
+                return false;
+            }
+            if(ip.equals("localhost")){
+                return true;
+            }
+            String[] parts = ip.split( "\\." );
+            if ( parts.length != 4 ) {
+                return false;
+            }
+
+            for ( String s : parts ) {
+                int i = Integer.parseInt( s );
+                if ( (i < 0) || (i > 255) ) {
+                    return false;
+                }
+            }
+            return !ip.endsWith(".");
+        } catch (NumberFormatException nfe) {
+            return false;
         }
     }
 }

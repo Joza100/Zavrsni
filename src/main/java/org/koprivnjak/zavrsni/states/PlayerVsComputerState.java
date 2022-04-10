@@ -6,9 +6,8 @@ import com.github.bhlangonijr.chesslib.move.Move;
 import javafx.scene.layout.BorderPane;
 import org.koprivnjak.zavrsni.ai.ComputerPlayer;
 import org.koprivnjak.zavrsni.ui.BoardUI;
-import org.koprivnjak.zavrsni.ui.Closable;
 
-public class PlayerVsComputerState extends BorderPane implements Closable {
+public class PlayerVsComputerState extends BorderPane implements State {
     private Board board;
     private BoardUI boardUI;
 
@@ -45,6 +44,11 @@ public class PlayerVsComputerState extends BorderPane implements Closable {
         if(playerSide == Side.BLACK){
             computerPlayer.findMove();
         }
+    }
+
+    @Override
+    public void start() {
+
     }
     @Override
     public void close() {

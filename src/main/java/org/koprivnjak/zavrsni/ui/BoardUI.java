@@ -3,6 +3,7 @@ package org.koprivnjak.zavrsni.ui;
 
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 import javafx.scene.canvas.Canvas;
@@ -57,9 +58,9 @@ public class BoardUI extends Pane {
                     draw();
                 }
         );
-        setOnMousePressed(this::onMousePressed);
-        setOnMouseReleased(this::onMouseReleased);
-        setOnMouseDragged(this::onMouseDragged);
+        canvas.setOnMousePressed(this::onMousePressed);
+        canvas.setOnMouseReleased(this::onMouseReleased);
+        canvas.setOnMouseDragged(this::onMouseDragged);
     }
 
     private void onMousePressed(MouseEvent mouseEvent) {
@@ -111,6 +112,13 @@ public class BoardUI extends Pane {
         dimensions = Math.min(width, height);
         squareDimensions = dimensions / 8;
         canvas.resize(dimensions, dimensions);
+        if(width > height){
+            canvas.translateYProperty().set(0);
+            canvas.translateXProperty().set((width - dimensions) / 2);
+        } else if (height > width){
+            canvas.translateYProperty().set((height - dimensions) / 2);
+            canvas.translateXProperty().set(0);
+        }
 
         createPiecesDraws();
         redraw();
@@ -210,6 +218,11 @@ public class BoardUI extends Pane {
 
     public void flip(){
         flipped = !flipped;
+        draw();
+    }
+    public void flip(Side side){
+        flipped = side != Side.WHITE;
+        draw();
     }
 
     public Square rankFileToSquare(int rank, int file){
