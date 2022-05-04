@@ -1,42 +1,47 @@
 package org.koprivnjak.zavrsni.states;
 
 import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.BoardEventType;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.move.Move;
-import javafx.concurrent.Task;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import org.koprivnjak.zavrsni.networking.Communication;
-import org.koprivnjak.zavrsni.networking.MovePacket;
-import org.koprivnjak.zavrsni.networking.StartGamePacket;
+import org.koprivnjak.zavrsni.networking.*;
 import org.koprivnjak.zavrsni.ui.BoardUI;
+import org.koprivnjak.zavrsni.ui.GameStateLabel;
+import org.koprivnjak.zavrsni.ui.MoveKeyboardListener;
+import org.koprivnjak.zavrsni.ui.MovePane;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class OnlineState extends BorderPane implements State {
 
-    class WaitForPlayerTask extends Task<Object> {
-        @Override
-        protected Socket call() throws Exception {
-            socket = serverSocket.accept();
-            return null;
-        }
-    }
 
-    private static final double RIGHT_PANE_WIDTH = 300;
+    //private static final double RIGHT_PANE_WIDTH = 300;
 
     private BoardUI boardUI;
 
+
+    private AnchorPane rightPane;
+    private MovePane movePane;
+    private HBox rightPaneHBox;
     private VBox rightButtons;
     private Button resignButton;
     private Button drawButton;
+
+    private Button drawAcceptButton;
+    private Button drawDeclineButton;
+    private GameStateLabel gameStateLabel;
 
     private Board board;
 
@@ -45,13 +50,11 @@ public class OnlineState extends BorderPane implements State {
     private Communication communication;
 
     private boolean isServer;
-    private String ipAddress;
-    private int port;
     private Side side;
+
 
     public OnlineState(){
         boardUI = new BoardUI();
-        boardUI.getStyleClass().add("setupPane");
 
         rightButtons = new VBox();
         rightButtons.setAlignment(Pos.CENTER_LEFT);
@@ -62,47 +65,50 @@ public class OnlineState extends BorderPane implements State {
         drawButton.setMinSize(100, 50);
         rightButtons.getChildren().addAll(resignButton, drawButton);
         rightButtons.getStyleClass().add("setupPane");
-        rightButtons.setMinWidth(RIGHT_PANE_WIDTH);
 
-        setRight(rightButtons);
+        movePane = new MovePane(boardUI);
+        MoveKeyboardListener moveKeyboardListener = new MoveKeyboardListener(movePane);
+        movePane.setOnKeyPressed(moveKeyboardListener);
+        boardUI.addEventFilter(KeyEvent.ANY, moveKeyboardListener);
+
+        gameStateLabel = new GameStateLabel();
+        rightPaneHBox = new HBox();
+        AnchorPane.setBottomAnchor(rightPaneHBox, 300.0);
+        AnchorPane.setRightAnchor(rightPaneHBox, 70.0);
+        rightPaneHBox.getChildren().addAll(movePane, rightButtons);
+
+        rightPane = new AnchorPane();
+        rightPane.getChildren().addAll(rightPaneHBox, gameStateLabel);
+
+
+        setRight(rightPane);
         setCenter(boardUI);
+
+
+        drawAcceptButton = new Button("Accept draw");
+        drawDeclineButton = new Button("Decline draw");
+        drawAcceptButton.setMinSize(100, 50);
+        drawDeclineButton.setMinSize(100, 50);
+
     }
 
-    public OnlineState(int port, Side side){
+    public OnlineState(ServerSocket serverSocket, Socket socket, Side side){
         this();
         isServer = true;
         this.side = side;
-        this.port = port;
+        this.serverSocket = serverSocket;
+        this.socket = socket;
     }
-    public OnlineState(int port, String ipAddress){
+    public OnlineState(Socket socket){
         this();
         isServer = false;
-        this.port = port;
-        this.ipAddress = ipAddress;
+        this.socket = socket;
         this.side = Side.WHITE;
     }
 
     @Override
     public void start() {
-        if(isServer) {
-            try {
-                serverSocket = new ServerSocket(port);
-                WaitForPlayerTask waitForPlayerTask = new WaitForPlayerTask();
-                waitForPlayerTask.setOnSucceeded(event -> startCommunication());
-                ExecutorService executorService = Executors.newFixedThreadPool(1);
-                executorService.execute(waitForPlayerTask);
-                executorService.shutdown();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            try {
-                socket = new Socket(ipAddress, port);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            startCommunication();
-        }
+        startCommunication();
     }
 
     private void startCommunication(){
@@ -115,6 +121,18 @@ public class OnlineState extends BorderPane implements State {
                 Move move = new Move(movePacket.getLan(), null);
                 board.doMove(move);
                 boardUI.draw();
+            } else if (packet instanceof ResignPacket){
+                win();
+            } else if (packet instanceof DrawPacket drawPacket) {
+                if(drawPacket.getDrawRequest() == DrawPacket.DrawRequest.OFFER){
+                    Platform.runLater(() -> rightButtons.getChildren().addAll(drawAcceptButton, drawDeclineButton));
+                    gameStateLabel.show("Your opponent offered a draw.", "white");
+                } else if (drawPacket.getDrawRequest() == DrawPacket.DrawRequest.ACCEPT){
+                    gameStateLabel.hide();
+                    Platform.runLater(this::draw);
+                } else if (drawPacket.getDrawRequest() == DrawPacket.DrawRequest.DECLINE){
+                    gameStateLabel.hide();
+                }
             } else if (!isServer){
                 if(packet instanceof StartGamePacket startGamePacket){
                     side = Side.fromValue(startGamePacket.getSide());
@@ -122,6 +140,10 @@ public class OnlineState extends BorderPane implements State {
                 }
             }
         });
+        resignButton.setOnMouseClicked(this::onResignClicked);
+        drawButton.setOnMouseClicked(this::onDrawOfferClicked);
+        drawAcceptButton.setOnMouseClicked(this::onDrawAcceptClicked);
+        drawDeclineButton.setOnMouseClicked(this::onDrawDeclineClicked);
 
         boardUI.setBoardClickListener(move -> {
             for (Move legalMove : board.legalMoves()){
@@ -133,8 +155,64 @@ public class OnlineState extends BorderPane implements State {
             }
         });
         board = new Board();
+        board.addEventListener(BoardEventType.ON_MOVE, movePane);
+        board.addEventListener(BoardEventType.ON_MOVE, (event) -> {
+            if(board.isMated()){
+                if (board.getSideToMove() == side){
+                    lose();
+                } else {
+                    win();
+                }
+            } else if (board.isDraw()){
+                draw();
+            }
+        });
         boardUI.setBoard(board);
         boardUI.flip(side);
+    }
+
+    private void onDrawDeclineClicked(MouseEvent mouseEvent) {
+        communication.sendPacket(new DrawPacket(DrawPacket.DrawRequest.DECLINE));
+        gameStateLabel.hide();
+        rightButtons.getChildren().remove(drawAcceptButton);
+        rightButtons.getChildren().remove(drawDeclineButton);
+    }
+
+    private void onDrawAcceptClicked(MouseEvent mouseEvent) {
+        communication.sendPacket(new DrawPacket(DrawPacket.DrawRequest.ACCEPT));
+        gameStateLabel.hide();
+        rightButtons.getChildren().remove(drawAcceptButton);
+        rightButtons.getChildren().remove(drawDeclineButton);
+        draw();
+    }
+
+    private void onDrawOfferClicked(MouseEvent mouseEvent) {
+        communication.sendPacket(new DrawPacket(DrawPacket.DrawRequest.OFFER));
+        gameStateLabel.show("Draw offered...", "white");
+    }
+
+    private void onResignClicked(MouseEvent event){
+        communication.sendPacket(new ResignPacket());
+        lose();
+    }
+
+    private void win(){
+        gameStateLabel.show("You have won!", "green");
+        stopGame();
+    }
+    private void lose(){
+        gameStateLabel.show("You have lost!", "red");
+        stopGame();
+    }
+    private void draw(){
+        gameStateLabel.show("Draw", "white");
+        stopGame();
+    }
+
+    private void stopGame(){
+        drawButton.setOnMouseClicked(null);
+        resignButton.setOnMouseClicked(null);
+        boardUI.setBoardClickListener(null);
     }
 
     @Override

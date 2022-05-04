@@ -2,6 +2,7 @@ package org.koprivnjak.zavrsni;
 
 import com.github.bhlangonijr.chesslib.Side;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.event.Event;
 import javafx.geometry.Orientation;
@@ -13,21 +14,30 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import org.koprivnjak.zavrsni.networking.ConnectTask;
+import org.koprivnjak.zavrsni.networking.WaitForPlayerTask;
 import org.koprivnjak.zavrsni.states.OnlineState;
 import org.koprivnjak.zavrsni.states.PlayerVsComputerState;
 import org.koprivnjak.zavrsni.states.PlayerVsPlayerState;
 import org.koprivnjak.zavrsni.ui.BoardUI;
 import org.koprivnjak.zavrsni.states.State;
 
+import java.io.IOException;
+import java.net.BindException;
+import java.net.ServerSocket;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class MainWindow extends Application {
     private static final int INTEGER_PARSE_ERROR = -100;
-    private static final double LEFT_PANE_WIDTH = 300;
+    private static final double LEFT_PANE_MIN_WIDTH = 250;
+    private static final double LEFT_PANE_MAX_WIDTH = 300;
 
     private Pane currentState;
 
+    private Scene scene;
     private BorderPane root;
 
     private GridPane leftButtonPane;
@@ -45,7 +55,7 @@ public class MainWindow extends Application {
     private Label playComputerDepthLabel;
     private TextField playComputerDepthTextField;
     private Label playComputerErrorLabel;
-    private FlowPane playComputerConfirmButtons;
+    private HBox playComputerConfirmButtons;
     private Button playComputerCancelButton;
     private Button playComputerConfirmButton;
 
@@ -57,8 +67,9 @@ public class MainWindow extends Application {
     private ComboBox<String> createServerSelectSideComboBox;
     private Label createServerPortLabel;
     private TextField createServerPortTextField;
+    private Label createServerInfoLabel;
     private Label createServerErrorLabel;
-    private FlowPane createServerConfirmButtons;
+    private HBox createServerConfirmButtons;
     private Button createServerCancelButton;
     private Button createServerConfirmButton;
 
@@ -70,10 +81,12 @@ public class MainWindow extends Application {
     private Label createClientPortLabel;
     private TextField createClientPortTextField;
     private Label createClientErrorLabel;
-    private FlowPane createClientConfirmButtons;
+    private Label createClientInfoLabel;
+    private HBox createClientConfirmButtons;
     private Button createClientCancelButton;
     private Button createClientConfirmButton;
 
+    private ServerSocket serverSocket;
     private Random random;
 
     public MainWindow(){
@@ -106,25 +119,28 @@ public class MainWindow extends Application {
         createServerPortTextField = new TextField();
         createServerErrorLabel = new Label();
         createServerErrorLabel.getStyleClass().add("errorLabel");
+        createServerInfoLabel = new Label();
+        createServerInfoLabel.getStyleClass().add("infoLabel");
         createServerConfirmButton = new Button("Confirm");
         createServerCancelButton = new Button("Cancel");
         createServerConfirmButton.setMinSize(100, 40);
         createServerCancelButton.setMinSize(100, 40);
         createServerConfirmButton.setOnMouseClicked(this::onCreateServerConfirmButtonClicked);
         createServerCancelButton.setOnMouseClicked(this::onCreateServerCancelButtonClicked);
-        createServerConfirmButtons = new FlowPane();
+        createServerConfirmButtons = new HBox();
         createServerConfirmButtons.getChildren().addAll(createServerCancelButton, createServerConfirmButton);
-        createServerConfirmButtons.setOrientation(Orientation.HORIZONTAL);
+        //createServerConfirmButtons.setOrientation(Orientation.HORIZONTAL);
 
         AnchorPane.setLeftAnchor(createServerSettingsPane, 5.0);
         AnchorPane.setTopAnchor(createServerSettingsPane, 80.0);
         createServerSettingsPane.getChildren().addAll(createServerSelectSideLabel,
                 createServerSelectSideComboBox, createServerPortLabel,
-                createServerPortTextField, createServerErrorLabel, createServerConfirmButtons);
+                createServerPortTextField, createServerInfoLabel, createServerErrorLabel, createServerConfirmButtons);
 
 
         createServerSetup.getChildren().addAll(createServerLabel, createServerSettingsPane);
-        createServerSetup.setPrefWidth(LEFT_PANE_WIDTH);
+        createServerSetup.setMinWidth(LEFT_PANE_MIN_WIDTH);
+        createServerSetup.setMaxWidth(LEFT_PANE_MAX_WIDTH);
 
 
         //Create client screen
@@ -143,24 +159,29 @@ public class MainWindow extends Application {
         createClientIpAddressTextField = new TextField();
         createClientErrorLabel = new Label();
         createClientErrorLabel.getStyleClass().add("errorLabel");
+        createClientInfoLabel = new Label();
+        createClientInfoLabel.getStyleClass().add("infoLabel");
         createClientConfirmButton = new Button("Confirm");
         createClientCancelButton = new Button("Cancel");
         createClientConfirmButton.setMinSize(100, 40);
         createClientCancelButton.setMinSize(100, 40);
         createClientConfirmButton.setOnMouseClicked(this::onCreateClientConfirmButtonClicked);
         createClientCancelButton.setOnMouseClicked(this::onCreateClientCancelButtonClicked);
-        createClientConfirmButtons = new FlowPane();
+        createClientConfirmButtons = new HBox();
         createClientConfirmButtons.getChildren().addAll(createClientCancelButton, createClientConfirmButton);
-        createClientConfirmButtons.setOrientation(Orientation.HORIZONTAL);
+        //createClientConfirmButtons.setOrientation(Orientation.HORIZONTAL);
 
         AnchorPane.setLeftAnchor(createClientSettingsPane, 5.0);
         AnchorPane.setTopAnchor(createClientSettingsPane, 80.0);
         createClientSettingsPane.getChildren().addAll(createClientIpAddressLabel, createClientIpAddressTextField,
-                createClientPortLabel, createClientPortTextField, createClientErrorLabel, createClientConfirmButtons);
+                createClientPortLabel, createClientPortTextField, createClientErrorLabel, createClientInfoLabel,
+                createClientConfirmButtons);
 
 
         createClientSetup.getChildren().addAll(createClientLabel, createClientSettingsPane);
-        createClientSetup.setPrefWidth(LEFT_PANE_WIDTH);
+        createClientSetup.setMinWidth(LEFT_PANE_MIN_WIDTH);
+        createClientSetup.setMaxWidth(LEFT_PANE_MAX_WIDTH);
+
 
         //Play against computer screen
         playComputerSetup = new AnchorPane();
@@ -178,9 +199,9 @@ public class MainWindow extends Application {
         playComputerConfirmButton.getStyleClass().add("confirmButtons");
         playComputerConfirmButton.setMinSize(100, 40);
         playComputerConfirmButton.setOnMouseClicked(this::onPlayComputerConfirmButtonClicked);
-        playComputerConfirmButtons = new FlowPane();
+        playComputerConfirmButtons = new HBox();
         playComputerConfirmButtons.getChildren().addAll(playComputerCancelButton, playComputerConfirmButton);
-        playComputerConfirmButtons.setOrientation(Orientation.HORIZONTAL);
+        //playComputerConfirmButtons.setOrientation(Orientation.HORIZONTAL);
 
         playComputerSettingsPane = new FlowPane();
         playComputerSettingsPane.setOrientation(Orientation.VERTICAL);
@@ -200,11 +221,12 @@ public class MainWindow extends Application {
 
 
         playComputerSetup.getChildren().addAll(playComputerLabel, playComputerSettingsPane);
-        playComputerSetup.setMinWidth(LEFT_PANE_WIDTH);
-
+        playComputerSetup.setMinWidth(LEFT_PANE_MIN_WIDTH);
+        playComputerSetup.setMaxWidth(LEFT_PANE_MAX_WIDTH);
 
         //Buttons Pane
         leftButtonPane = new GridPane();
+        leftButtonPane.getStyleClass().add("setupPane");
         playComputerButton = new Button("Computer");
         playComputerButton.setOnMouseClicked(this::onPlayComputerButtonClicked);
         playLocalButton = new Button("1v1");
@@ -213,7 +235,8 @@ public class MainWindow extends Application {
         createServerButton.setOnMouseClicked(this::onCreateServerButtonClicked);
         createClientButton = new Button("Online client");
         createClientButton.setOnMouseClicked(this::onCreateClientButtonClicked);
-        leftButtonPane.setMinWidth(LEFT_PANE_WIDTH);
+        leftButtonPane.setMinWidth(LEFT_PANE_MIN_WIDTH);
+        leftButtonPane.setMaxWidth(LEFT_PANE_MAX_WIDTH);
         leftButtonPane.add(playComputerButton, 0, 0);
         leftButtonPane.add(playLocalButton, 1, 0);
         leftButtonPane.add(createServerButton, 0, 1);
@@ -244,19 +267,35 @@ public class MainWindow extends Application {
         root.setCenter(new BoardUI());
 
         //Making a window
-        Scene scene = new Scene(root, 800, 800, true);
+        scene = new Scene(root, 800, 800, true);
         scene.getStylesheets().add("/style.css");
-        scene.widthProperty().addListener((observable, oldValue, newValue) -> {
-            
-        });
+        scene.widthProperty().addListener((observable) -> adjustSize());
+        scene.heightProperty().addListener((observable) -> adjustSize());
+        adjustSize();
         primaryStage.setScene(scene);
         primaryStage.setTitle("Chess");
         primaryStage.setOnCloseRequest(event -> closeCurrentState());
         primaryStage.show();
     }
 
+    private void adjustSize(){
+        //root.getStyleClass().add("setupPane");
+        ((Pane) root.getCenter()).setPrefWidth(scene.getHeight());
+        ((Pane) root.getCenter()).setPrefHeight(scene.getHeight());
+        ((Pane) root.getLeft()).setPrefWidth(scene.getWidth() - scene.getHeight());
+    }
+
+    private void setLeftPane(Pane leftPane){
+        playComputerErrorLabel.setText("");
+        createServerInfoLabel.setText("");
+        createServerErrorLabel.setText("");
+        createClientErrorLabel.setText("");
+        createClientInfoLabel.setText("");
+        root.setLeft(leftPane);
+    }
+
     private void onCreateClientCancelButtonClicked(MouseEvent mouseEvent) {
-        root.setLeft(leftButtonPane);
+        setLeftPane(leftButtonPane);
     }
 
     private void onCreateClientConfirmButtonClicked(MouseEvent mouseEvent) {
@@ -275,16 +314,30 @@ public class MainWindow extends Application {
         }
 
         if(successful){
-            createServerErrorLabel.setText("");
-            root.setLeft(leftButtonPane);
-            changeState(new OnlineState(port, ipAddress));
-        } else {
-            createServerErrorLabel.setText(errorText);
+            ConnectTask connectTask = new ConnectTask(ipAddress, port);
+            connectTask.setOnSucceeded(event -> changeState(new OnlineState(connectTask.getValue())));
+            connectTask.setOnFailed(event -> Platform.runLater(() -> {
+                createClientErrorLabel.setText("Failed to connect!");
+                createClientInfoLabel.setText("");
+            }));
+            ExecutorService executorService = Executors.newFixedThreadPool(1);
+            executorService.execute(connectTask);
+            executorService.shutdown();
+            createClientInfoLabel.setText("Attempting to connect...");
         }
+        createClientErrorLabel.setText(errorText);
     }
 
     private void onCreateServerCancelButtonClicked(MouseEvent mouseEvent) {
-        root.setLeft(leftButtonPane);
+        setLeftPane(leftButtonPane);
+        if(serverSocket != null){
+            try {
+                serverSocket.close();
+                serverSocket = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void onCreateServerConfirmButtonClicked(MouseEvent mouseEvent) {
@@ -310,11 +363,23 @@ public class MainWindow extends Application {
 
         if(successful){
             createServerErrorLabel.setText("");
-            root.setLeft(leftButtonPane);
-            changeState(new OnlineState(port, side));
-        } else {
-            createServerErrorLabel.setText(errorText);
+            try {
+                serverSocket = new ServerSocket(port);
+                WaitForPlayerTask waitForPlayerTask = new WaitForPlayerTask(serverSocket);
+                Side finalSide = side;
+                waitForPlayerTask.setOnSucceeded(event ->
+                    changeState(new OnlineState(serverSocket, waitForPlayerTask.getValue(), finalSide)));
+                ExecutorService executorService = Executors.newFixedThreadPool(1);
+                executorService.execute(waitForPlayerTask);
+                executorService.shutdown();
+                createServerInfoLabel.setText("Waiting for a player!");
+            } catch (BindException e){
+                errorText += "The selected port is already in use!";
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+        createServerErrorLabel.setText(errorText);
     }
 
     private void onPlayComputerConfirmButtonClicked(MouseEvent mouseEvent) {
@@ -341,18 +406,17 @@ public class MainWindow extends Application {
         if(successful){
             changeState(new PlayerVsComputerState(side, depth));
             playComputerErrorLabel.setText("");
-            root.setLeft(leftButtonPane);
         } else {
             playComputerErrorLabel.setText(errorText);
         }
     }
 
     private void onPlayComputerCancelButtonClicked(MouseEvent mouseEvent) {
-        root.setLeft(leftButtonPane);
+        setLeftPane(leftButtonPane);
     }
 
     private void onPlayComputerButtonClicked(MouseEvent mouseEvent){
-        root.setLeft(playComputerSetup);
+        setLeftPane(playComputerSetup);
     }
 
     public void onPlayLocalButtonClicked(Event event){
@@ -360,10 +424,10 @@ public class MainWindow extends Application {
     }
 
     private void onCreateServerButtonClicked(MouseEvent mouseEvent) {
-        root.setLeft(createServerSetup);
+        setLeftPane(createServerSetup);
     }
     private void onCreateClientButtonClicked(MouseEvent mouseEvent){
-        root.setLeft(createClientSetup);
+        setLeftPane(createClientSetup);
     }
 
     private void changeState(Pane state){
@@ -376,8 +440,9 @@ public class MainWindow extends Application {
             ((Pane) root.getCenter()).setMinHeight(scene.getHeight());
             ((Pane) root.getLeft()).setPrefWidth(paneWidth);
         });*/
+        setLeftPane(leftButtonPane);
         root.setCenter(state);
-
+        adjustSize();
     }
 
     private void closeCurrentState(){

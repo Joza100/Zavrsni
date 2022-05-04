@@ -30,6 +30,9 @@ public class Communication implements Runnable {
     }
 
     public void sendPacket(Packet packet){
+        if(!running){
+            return;
+        }
         try {
             out.writeObject(packet);
         } catch (IOException e) {

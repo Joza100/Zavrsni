@@ -1,10 +1,7 @@
 package org.koprivnjak.zavrsni.ui;
 
 
-import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.Side;
-import com.github.bhlangonijr.chesslib.Square;
+import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -17,6 +14,7 @@ import javafx.scene.paint.Color;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class BoardUI extends Pane {
     private static final Color LIGHT_SQUARE = Color.rgb(240, 217, 181);
@@ -41,11 +39,14 @@ public class BoardUI extends Pane {
     private List<PieceDraw> pieceDrawList;
     private PieceDraw selectedPieceDraw;
 
+    private List<String> history;
+
     private BoardClickListener boardClickListener;
 
     public BoardUI() {
         flipped = false;
-        pieceDrawList = new ArrayList<>();
+        pieceDrawList = new CopyOnWriteArrayList<>();
+        history = new ArrayList<>();
         canvas = new ResizableCanvas();
         getChildren().add(canvas);
         widthProperty().addListener((observable, oldValue, newValue) -> {
@@ -58,6 +59,7 @@ public class BoardUI extends Pane {
                     draw();
                 }
         );
+        requestFocus();
         canvas.setOnMousePressed(this::onMousePressed);
         canvas.setOnMouseReleased(this::onMouseReleased);
         canvas.setOnMouseDragged(this::onMouseDragged);
@@ -73,6 +75,7 @@ public class BoardUI extends Pane {
             }
             redraw();
         }
+        requestFocus();
     }
     private void onMouseReleased(MouseEvent mouseEvent) {
         if(selectedPieceDraw == null){
@@ -108,6 +111,13 @@ public class BoardUI extends Pane {
     }
 
 
+    public void drawPreviousPosition(int turn){
+        Board newBoard = new Board();
+        newBoard.loadFromFen(history.get(turn));
+        createPieceDraws(newBoard);
+        redraw();
+    }
+
     public void draw(){
         dimensions = Math.min(width, height);
         squareDimensions = dimensions / 8;
@@ -118,6 +128,9 @@ public class BoardUI extends Pane {
         } else if (height > width){
             canvas.translateYProperty().set((height - dimensions) / 2);
             canvas.translateXProperty().set(0);
+        } else {
+            canvas.translateXProperty().set(0);
+            canvas.translateYProperty().set(0);
         }
 
         createPiecesDraws();
@@ -169,6 +182,9 @@ public class BoardUI extends Pane {
         if(board == null){
             return;
         }
+        createPieceDraws(board);
+    }
+    private void createPieceDraws(Board board){
         pieceDrawList.clear();
         for (Square square : Square.values()) {
             Piece piece = board.getPiece(square);
@@ -205,7 +221,7 @@ public class BoardUI extends Pane {
     private void drawPieces(){
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
-        for (PieceDraw pieceDraw : pieceDrawList) {
+         for (PieceDraw pieceDraw : pieceDrawList) {
             if (pieceDraw == selectedPieceDraw){
                 continue;
             }
@@ -256,6 +272,9 @@ public class BoardUI extends Pane {
 
     public void setBoard(Board board) {
         this.board = board;
+        history.clear();
+        history.add(board.getFen());
+        board.addEventListener(BoardEventType.ON_MOVE, event -> history.add(board.getFen()));
         draw();
     }
 

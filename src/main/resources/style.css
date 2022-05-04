@@ -24,7 +24,48 @@
     -fx-weight: bold;
     -fx-font-size: 20px;
 }
+.infoLabel {
+    -fx-text-fill: White;
+    -fx-weight: bold;
+    -fx-font-size: 20px;
+}
 .inputLabel {
     -fx-font-size: 20px;
     -fx-weight: bold;
+}
+
+.scroll-pane > .viewport {
+   -fx-background-color: transparent;
+}
+
+.movePane {
+    -fx-font-size: 25px;
+    -fx-border-color: Black;
+    -fx-border-width: 3;
+    -fx-background-color: rgb(51, 56, 60);
+}
+
+.moveNumberLabel {
+    -fx-background-color: derive(-fx-base, 35%);
+}
+
+.gameStateLabel{
+    -fx-font-size: 26px;
+    -fx-weight: bold;
+}
+.moveLabel:hover {
+    -fx-background-color: Grey;
+}
+.moveLabelSelected {
+    -fx-background-color: DarkGrey;
+}
+
+.red{
+    -fx-text-fill: Red;
+}
+.green{
+    -fx-text-fill: Green;
+}
+.white{
+    -fx-text-fill: White;
 }
