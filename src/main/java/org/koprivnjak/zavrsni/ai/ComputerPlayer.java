@@ -20,14 +20,12 @@ public class ComputerPlayer {
             UCIResponse<Analysis> response = uci.analysis(depth);
             var analysis = response.getResultOrThrow();
 
-// Best move
-            /*System.out.println("Best move: " + analysis.getBestMove());
+            System.out.println("Best move: " + analysis.getBestMove());
             System.out.println("Is Draw: " + analysis.isDraw());
-            System.out.println("Is Mate: " + analysis.isMate());*/
+            System.out.println("Is Mate: " + analysis.isMate());
 
-// Possible best moves
-            /*var moves = analysis.getAllMoves();
-            moves.forEach((idx, move) -> System.out.println("\t" + move));*/
+            var moves = analysis.getAllMoves();
+            moves.forEach((idx, move) -> System.out.println("\t" + move));
             return analysis.getBestMove();
         }
     }

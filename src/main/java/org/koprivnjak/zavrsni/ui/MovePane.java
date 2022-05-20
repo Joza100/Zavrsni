@@ -13,7 +13,6 @@ import javafx.scene.layout.GridPane;
 public class MovePane extends ScrollPane implements BoardEventListener {
 
     private GridPane gridPane;
-    private int selectedMove;
     private MoveLabel selectedMoveLabel;
     private int currentRow;
     private int currentColumn;
@@ -46,6 +45,20 @@ public class MovePane extends ScrollPane implements BoardEventListener {
         Label numberLabel = new Label("    " + (currentRow + 1) + "    ");
         numberLabel.getStyleClass().add("moveNumberLabel");
         gridPane.add(numberLabel, 0, currentRow);
+
+        boardUI.setBoardDrawnMoveChangedListener(selectedMove -> {
+            if(selectedMoveLabel != null){
+                selectedMoveLabel.showAsNotSelected();
+            }
+            for (Node node : gridPane.getChildren()){
+                if (node instanceof MoveLabel moveLabel){
+                    if (moveLabel.getMove() == selectedMove){
+                        selectedMoveLabel = moveLabel;
+                        selectedMoveLabel.showAsSelected();
+                    }
+                }
+            }
+        });
     }
 
     @Override
@@ -53,9 +66,8 @@ public class MovePane extends ScrollPane implements BoardEventListener {
         Platform.runLater(() -> {
             moveCount++;
             Move move = (Move) event;
-            MoveLabel label = new MoveLabel(this," " + move.toString(), moveCount);
+            MoveLabel label = new MoveLabel(boardUI," " + move.toString(), moveCount);
             gridPane.add(label, currentColumn, currentRow);
-            //setSelectedMoveLabel(label);
             currentColumn++;
 
             if (currentColumn == 3) {
@@ -72,62 +84,4 @@ public class MovePane extends ScrollPane implements BoardEventListener {
         return boardUI;
     }
 
-    public void setSelectedMoveLabel(MoveLabel selectedMoveLabel) {
-        boardUI.drawPreviousPosition(selectedMoveLabel.getMove());
-        selectedMoveLabel.getStyleClass().add("moveLabelSelected");
-        if(this.selectedMoveLabel != null){
-            this.selectedMoveLabel.getStyleClass().remove("moveLabelSelected");
-        }
-        selectedMove = selectedMoveLabel.getMove();
-        this.selectedMoveLabel = selectedMoveLabel;
-    }
-    public void selectMoveLeft(){
-        selectedMove--;
-        if(selectedMove == 0){
-            selectMoveZero();
-            return;
-        } else if (selectedMove < 0){
-            selectedMove = 0;
-            selectMoveZero();
-        }
-        for (Node node : gridPane.getChildren()){
-            if (node instanceof MoveLabel moveLabel){
-                if(moveLabel.getMove() == selectedMove){
-                    setSelectedMoveLabel(moveLabel);
-                }
-            }
-        }
-    }
-    public void selectMoveRight(){
-        selectedMove++;
-        if(selectedMove > moveCount){
-            selectedMove = moveCount;
-            return;
-        }
-        for (Node node : gridPane.getChildren()){
-            if (node instanceof MoveLabel moveLabel){
-                if(moveLabel.getMove() == selectedMove){
-                    setSelectedMoveLabel(moveLabel);
-                }
-            }
-        }
-    }
-    public void selectMoveZero(){
-        selectedMove = 0;
-        if(selectedMoveLabel != null) {
-            selectedMoveLabel.getStyleClass().remove("moveLabelSelected");
-            selectedMoveLabel = null;
-        }
-        boardUI.drawPreviousPosition(0);
-    }
-    public void selectLastMove(){
-        selectedMove = moveCount;
-        for (Node node : gridPane.getChildren()){
-            if (node instanceof MoveLabel moveLabel){
-                if(moveLabel.getMove() == selectedMove){
-                    setSelectedMoveLabel(moveLabel);
-                }
-            }
-        }
-    }
 }

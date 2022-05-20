@@ -105,7 +105,7 @@ public class MainWindow extends Application {
         //Create server screen
         createServerSetup = new AnchorPane();
         createServerSetup.getStyleClass().add("setupPane");
-        createServerLabel = new Label("Create server");
+        createServerLabel = new Label("Host a game");
         createServerLabel.getStyleClass().add("titleLabel");
 
         createServerSettingsPane = new FlowPane();
@@ -146,7 +146,7 @@ public class MainWindow extends Application {
         //Create client screen
         createClientSetup = new AnchorPane();
         createClientSetup.getStyleClass().add("setupPane");
-        createClientLabel = new Label("Create client");
+        createClientLabel = new Label("Join a game");
         createClientLabel.getStyleClass().add("titleLabel");
         createClientSettingsPane = new FlowPane();
         createClientSettingsPane.setOrientation(Orientation.VERTICAL);
@@ -227,13 +227,13 @@ public class MainWindow extends Application {
         //Buttons Pane
         leftButtonPane = new GridPane();
         leftButtonPane.getStyleClass().add("setupPane");
-        playComputerButton = new Button("Computer");
+        playComputerButton = new Button("Play against\nthe computer");
         playComputerButton.setOnMouseClicked(this::onPlayComputerButtonClicked);
         playLocalButton = new Button("1v1");
         playLocalButton.setOnMouseClicked(this::onPlayLocalButtonClicked);
-        createServerButton = new Button("Online server");
+        createServerButton = new Button("Host a game");
         createServerButton.setOnMouseClicked(this::onCreateServerButtonClicked);
-        createClientButton = new Button("Online client");
+        createClientButton = new Button("Join a game");
         createClientButton.setOnMouseClicked(this::onCreateClientButtonClicked);
         leftButtonPane.setMinWidth(LEFT_PANE_MIN_WIDTH);
         leftButtonPane.setMaxWidth(LEFT_PANE_MAX_WIDTH);

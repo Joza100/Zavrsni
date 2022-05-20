@@ -39,11 +39,16 @@ public class BoardUI extends Pane {
     private List<PieceDraw> pieceDrawList;
     private PieceDraw selectedPieceDraw;
 
+    private boolean drawPreviousPosition;
+    private int moveCount;
+    private int selectedMove;
     private List<String> history;
 
     private BoardClickListener boardClickListener;
+    private BoardDrawnMoveChangedListener boardDrawnMoveChangedListener;
 
     public BoardUI() {
+        drawPreviousPosition = false;
         flipped = false;
         pieceDrawList = new CopyOnWriteArrayList<>();
         history = new ArrayList<>();
@@ -59,7 +64,9 @@ public class BoardUI extends Pane {
                     draw();
                 }
         );
+        moveCount = 0;
         requestFocus();
+
         canvas.setOnMousePressed(this::onMousePressed);
         canvas.setOnMouseReleased(this::onMouseReleased);
         canvas.setOnMouseDragged(this::onMouseDragged);
@@ -110,14 +117,6 @@ public class BoardUI extends Pane {
         redraw();
     }
 
-
-    public void drawPreviousPosition(int turn){
-        Board newBoard = new Board();
-        newBoard.loadFromFen(history.get(turn));
-        createPieceDraws(newBoard);
-        redraw();
-    }
-
     public void draw(){
         dimensions = Math.min(width, height);
         squareDimensions = dimensions / 8;
@@ -133,7 +132,7 @@ public class BoardUI extends Pane {
             canvas.translateYProperty().set(0);
         }
 
-        createPiecesDraws();
+        createPieceDraws();
         redraw();
     }
     public void redraw(){
@@ -178,11 +177,21 @@ public class BoardUI extends Pane {
         }
     }
 
-    private void createPiecesDraws(){
+    private void createPieceDraws(){
         if(board == null){
             return;
         }
-        createPieceDraws(board);
+
+        if (drawPreviousPosition){
+            Board newBoard = new Board();
+            newBoard.loadFromFen(history.get(selectedMove));
+            createPieceDraws(newBoard);
+        } else {
+            createPieceDraws(board);
+        }
+        if (boardDrawnMoveChangedListener != null) {
+            boardDrawnMoveChangedListener.onBoardDrawnMoveChanged(selectedMove);
+        }
     }
     private void createPieceDraws(Board board){
         pieceDrawList.clear();
@@ -270,12 +279,53 @@ public class BoardUI extends Pane {
         this.boardClickListener = boardClickListener;
     }
 
+    public void setBoardDrawnMoveChangedListener(BoardDrawnMoveChangedListener boardDrawnMoveChangedListener) {
+        this.boardDrawnMoveChangedListener = boardDrawnMoveChangedListener;
+    }
+
     public void setBoard(Board board) {
         this.board = board;
         history.clear();
         history.add(board.getFen());
-        board.addEventListener(BoardEventType.ON_MOVE, event -> history.add(board.getFen()));
+        board.addEventListener(BoardEventType.ON_MOVE, event -> {
+            history.add(board.getFen());
+            moveCount++;
+        });
         draw();
     }
 
+    public int getDrawnMove() {
+        if (!drawPreviousPosition){
+            return moveCount;
+        } else {
+            return selectedMove;
+        }
+    }
+
+    public void setSelectedMove(int selectedMove){
+        drawPreviousPosition = selectedMove != moveCount;
+        this.selectedMove = selectedMove;
+        if (selectedMove < 0) {
+            this.selectedMove = 0;
+        } else if (selectedMove > moveCount){
+            this.selectedMove = moveCount;
+        }
+
+        createPieceDraws();
+        redraw();
+    }
+    public void selectedMoveLeft(){
+        setSelectedMove(selectedMove - 1);
+    }
+    public void selectedMoveRight(){
+        setSelectedMove(selectedMove + 1);
+    }
+
+    public boolean isDrawPreviousPosition() {
+        return drawPreviousPosition;
+    }
+
+    public int getMoveCount() {
+        return moveCount;
+    }
 }

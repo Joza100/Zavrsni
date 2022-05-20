@@ -67,7 +67,7 @@ public class OnlineState extends BorderPane implements State {
         rightButtons.getStyleClass().add("setupPane");
 
         movePane = new MovePane(boardUI);
-        MoveKeyboardListener moveKeyboardListener = new MoveKeyboardListener(movePane);
+        MoveKeyboardListener moveKeyboardListener = new MoveKeyboardListener(boardUI);
         movePane.setOnKeyPressed(moveKeyboardListener);
         boardUI.addEventFilter(KeyEvent.ANY, moveKeyboardListener);
 

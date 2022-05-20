@@ -7,24 +7,25 @@ import javafx.scene.input.KeyEvent;
 
 public class MoveKeyboardListener implements EventHandler<KeyEvent> {
 
-    private MovePane movePane;
+    private BoardUI boardUI;
 
-    public MoveKeyboardListener(MovePane movePane) {
-        this.movePane = movePane;
+    public MoveKeyboardListener(BoardUI boardUI) {
+        this.boardUI = boardUI;
     }
 
     @Override
     public void handle(KeyEvent event) {
         if(event.getEventType() == KeyEvent.KEY_PRESSED){
             if (event.getCode() == KeyCode.LEFT){
-                movePane.selectMoveLeft();
+                boardUI.selectedMoveLeft();
             } else if (event.getCode() == KeyCode.RIGHT){
-                movePane.selectMoveRight();
+                boardUI.selectedMoveRight();
             } else if (event.getCode() == KeyCode.UP){
-                movePane.selectMoveZero();
+                boardUI.setSelectedMove(0);
             } else if (event.getCode() == KeyCode.DOWN){
-                movePane.selectLastMove();
+                boardUI.setSelectedMove(boardUI.getMoveCount());
             }
+            boardUI.draw();
             event.consume();
         }
     }

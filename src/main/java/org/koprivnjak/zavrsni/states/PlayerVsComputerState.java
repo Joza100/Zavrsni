@@ -74,7 +74,7 @@ public class PlayerVsComputerState extends BorderPane implements State {
         rightButtons.getChildren().add(resignButton);
 
         movePane = new MovePane(boardUI);
-        MoveKeyboardListener moveKeyboardListener = new MoveKeyboardListener(movePane);
+        MoveKeyboardListener moveKeyboardListener = new MoveKeyboardListener(boardUI);
         boardUI.addEventFilter(KeyEvent.ANY, moveKeyboardListener);
         movePane.setOnKeyPressed(moveKeyboardListener);
         board.addEventListener(BoardEventType.ON_MOVE, movePane);
